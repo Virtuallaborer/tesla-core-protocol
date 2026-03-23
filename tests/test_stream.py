@@ -629,3 +629,460 @@ def test_stream_rejects_tool_to_environment_transition():
             "id": "stream_invalid_tool_to_environment",
             "observations": [obs1, obs2],
         })
+
+def test_stream_id_must_be_well_formed():
+    ts = datetime.utcnow()
+
+    valid_obs = Observation(**{
+        "id": "obs_stream_id_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Stream ID invariant probe",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Should succeed: well-formed stream id
+    stream_ok = ObservationStream.model_validate({
+        "id": "stream_ctx_001_valid",
+        "observations": [valid_obs],
+    })
+    assert stream_ok.id == "stream_ctx_001_valid"
+
+    # Missing 'stream_' prefix → must fail
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "ctx_001_invalid_prefix",
+            "observations": [valid_obs],
+        })
+
+    # Invalid characters in suffix → must fail
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_invalid-characters",
+            "observations": [valid_obs],
+        })
+
+    # Too long → must fail
+    long_suffix = "x" * 60
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_" + long_suffix,
+            "observations": [valid_obs],
+        })
+
+
+def test_stream_must_not_be_empty():
+    # A stream with no observations must be rejected
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_empty_001",
+            "observations": [],
+        })
+
+def test_stream_id_must_be_globally_unique():
+    ts = datetime.utcnow()
+
+    obs = Observation(**{
+        "id": "obs_stream_unique_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # First stream with this ID should succeed
+    stream1 = ObservationStream.model_validate({
+        "id": "stream_unique_test_001",
+        "observations": [obs],
+    })
+
+    # Second stream with the same ID must fail
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_unique_test_001",
+            "observations": [obs],
+        })
+
+def test_stream_must_not_contain_duplicate_observation_instances():
+    ts = datetime.utcnow()
+
+    obs = Observation(**{
+        "id": "obs_stream_instance_unique_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Attempt to reuse the same Observation instance twice
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_instance_dup_001",
+            "observations": [obs, obs],
+        })
+
+def test_stream_observation_ids_must_be_strictly_increasing():
+    ts = datetime.utcnow()
+
+    obs1 = Observation(**{
+        "id": "obs_alpha_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "First event",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_alpha_000",  # lexicographically smaller
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "user",
+        "content": "Second event",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Stream must reject ID regression
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_id_regression_001",
+            "observations": [obs1, obs2],
+        })
+
+def test_stream_must_not_contain_duplicate_timestamps_anywhere():
+    ts = datetime.utcnow()
+
+    obs1 = Observation(**{
+        "id": "obs_ts_dup_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_ts_dup_002",
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "user",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_ts_dup_003",
+        "timestamp": ts,  # duplicate timestamp, non-adjacent
+        "source": "user",
+        "content": "Event 3",
+        "provenance": {
+            "hash": "c" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Stream must reject duplicate timestamps anywhere in the sequence
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_ts_dup_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+def test_stream_provenance_hashes_must_be_strictly_increasing():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_hash_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,  # lexicographically smaller
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_hash_002",
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "user",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "9" * 32,  # lexicographically larger
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_hash_003",
+        "timestamp": ts + timedelta(seconds=2),
+        "source": "user",
+        "content": "Event 3",
+        "provenance": {
+            "hash": "0" * 32,  # regression
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Stream must reject provenance hash regression
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_hash_regression_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+def test_stream_provenance_confidence_must_be_non_decreasing():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_conf_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 0.9,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_conf_002",
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "user",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_conf_003",
+        "timestamp": ts + timedelta(seconds=2),
+        "source": "user",
+        "content": "Event 3",
+        "provenance": {
+            "hash": "c" * 32,
+            "origin": "user",
+            "confidence": 0.8,  # regression
+        },
+    })
+
+    # Stream must reject confidence regression
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_conf_regression_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+def test_stream_provenance_origin_must_be_coherent():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_origin_001",
+        "timestamp": ts,
+        "source": "environment",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "environment",  # valid
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_origin_002",
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "environment",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "sensor",  # also valid
+            "confidence": 1.0,
+        },
+    })
+
+    # Both observations are individually valid.
+    # The source transition environment → environment is allowed.
+    # But the stream must reject mixed provenance origins.
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_origin_incoherent_001",
+            "observations": [obs1, obs2],
+        })
+
+def test_stream_source_must_be_dominant_class():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_source_001",
+        "timestamp": ts,
+        "source": "environment",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "environment",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_source_002",
+        "timestamp": ts + timedelta(seconds=1),
+        "source": "environment",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "sensor",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_source_003",
+        "timestamp": ts + timedelta(seconds=2),
+        "source": "system",  # different source, but individually valid
+        "content": "Event 3",
+        "provenance": {
+            "hash": "c" * 32,
+            "origin": "system",
+            "confidence": 1.0,
+        },
+    })
+
+    # All observations are individually valid.
+    # environment → environment is allowed.
+    # environment → system is forbidden by adjacency,
+    # but we want the stream-level invariant to catch this BEFORE adjacency.
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_source_incoherent_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+def test_stream_temporal_gap_must_not_exceed_limit():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_gap_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_gap_002",
+        "timestamp": ts + timedelta(seconds=30),
+        "source": "user",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_gap_003",
+        "timestamp": ts + timedelta(seconds=120),  # gap of 90 seconds
+        "source": "user",
+        "content": "Event 3",
+        "provenance": {
+            "hash": "c" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Gap between obs2 and obs3 is 90 seconds → should fail
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_gap_violation_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+def test_stream_total_duration_must_not_exceed_window():
+    ts = datetime(2024, 1, 1, 12, 0, 0)
+
+    obs1 = Observation(**{
+        "id": "obs_window_001",
+        "timestamp": ts,
+        "source": "user",
+        "content": "Event 1",
+        "provenance": {
+            "hash": "a" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs2 = Observation(**{
+        "id": "obs_window_002",
+        "timestamp": ts + timedelta(seconds=100),
+        "source": "user",
+        "content": "Event 2",
+        "provenance": {
+            "hash": "b" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    obs3 = Observation(**{
+        "id": "obs_window_003",
+        "timestamp": ts + timedelta(seconds=400),  # total duration = 400 seconds
+        "source": "user",
+        "content": "Event 3",
+        "provenance": {
+            "hash": "c" * 32,
+            "origin": "user",
+            "confidence": 1.0,
+        },
+    })
+
+    # Total duration = 400 seconds → should fail (limit is 300)
+    with pytest.raises(ValidationError):
+        ObservationStream.model_validate({
+            "id": "stream_window_violation_001",
+            "observations": [obs1, obs2, obs3],
+        })
+
+
+
+
+

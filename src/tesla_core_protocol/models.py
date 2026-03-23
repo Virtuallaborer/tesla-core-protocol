@@ -191,6 +191,15 @@ class ObservationStream(BaseModel):
 
     id: str
     observations: list[Observation] = Field(..., validate_default=False)
+    _used_stream_ids: ClassVar[set[str]] = set() 
+    _id_checked: bool = PrivateAttr(default=False)
+
+    @model_validator(mode="after")
+    def enforce_non_empty_stream(self):
+        if not self.observations:
+            raise ValueError("ObservationStream must contain at least one Observation")
+        return self
+
 
 
     @model_validator(mode="after")
@@ -211,6 +220,73 @@ class ObservationStream(BaseModel):
                 )
 
         return self
+    
+    @model_validator(mode="after")
+    def enforce_strictly_increasing_observation_ids(self):
+        if len(self.observations) < 2:
+            return self
+
+        ids = [obs.id for obs in self.observations]
+
+        for i in range(1, len(ids)):
+            if ids[i] <= ids[i - 1]:
+                raise ValueError(
+                    f"Observation id '{ids[i]}' at index {i} must be strictly greater than "
+                    f"previous id '{ids[i - 1]}'"
+                )
+
+        return self
+    
+    @model_validator(mode="after")
+    def enforce_strictly_increasing_provenance_hashes(self):
+        if len(self.observations) < 2:
+            return self
+
+        hashes = [obs.provenance.hash for obs in self.observations]
+
+        for i in range(1, len(hashes)):
+            if hashes[i] < hashes[i - 1]:
+                raise ValueError(
+            f"Provenance hash '{hashes[i]}' at index {i} must not be less than "
+            f"previous hash '{hashes[i - 1]}'"
+        )
+
+
+        return self
+    
+    @model_validator(mode="after")
+    def enforce_non_decreasing_provenance_confidence(self):
+        if len(self.observations) < 2:
+            return self
+
+        confidences = [obs.provenance.confidence for obs in self.observations]
+
+        for i in range(1, len(confidences)):
+            if confidences[i] < confidences[i - 1]:
+                raise ValueError(
+                    f"Provenance confidence {confidences[i]} at index {i} must not be less than "
+                    f"previous confidence {confidences[i - 1]}"
+                )
+
+        return self
+    
+    @model_validator(mode="after")
+    def enforce_provenance_origin_coherence(self):
+        if len(self.observations) < 2:
+            return self
+
+        origins = [obs.provenance.origin for obs in self.observations]
+        first = origins[0]
+
+        for i, origin in enumerate(origins[1:], start=1):
+            if origin != first:
+                raise ValueError(
+                    f"Provenance origin '{origin}' at index {i} does not match "
+                    f"stream origin '{first}'"
+                )
+
+        return self
+
 
     @model_validator(mode="after")
     def enforce_source_adjacency(self):
@@ -316,6 +392,60 @@ class ObservationStream(BaseModel):
                 raise ValueError(
                     "Invalid source transition: system → user"
                 )
+            
 
         return self
- 
+    
+    
+    @field_validator("id")
+    def enforce_stream_id_well_formed(cls, v):
+        if not isinstance(v, str):
+            raise ValueError("stream id must be a string")
+
+        if not v.startswith("stream_"):
+            raise ValueError("stream id must start with 'stream_'")
+
+        suffix = v[len("stream_"):]
+        if not suffix:
+            raise ValueError("stream id must have characters after 'stream_'")
+
+        if len(v) > 64:
+            raise ValueError("stream id must not exceed 64 characters")
+
+        allowed = set("abcdefghijklmnopqrstuvwxyz0123456789_")
+        if not all(c in allowed for c in suffix):
+            raise ValueError("stream id suffix must contain only lowercase letters, digits, or underscores")
+
+        return v
+    
+    @model_validator(mode="after")
+    def enforce_unique_stream_id(self):
+        if not self._id_checked:
+            if self.id in ObservationStream._used_stream_ids:
+                raise ValueError(f"ObservationStream id '{self.id}' must be unique")
+            ObservationStream._used_stream_ids.add(self.id)
+            self._id_checked = True
+
+        return self
+    
+    @model_validator(mode="after")
+    def enforce_temporal_gap_limit(self):
+        if len(self.observations) < 2:
+            return self
+
+        # Maximum allowed gap in seconds
+        MAX_GAP_SECONDS = 60
+
+        timestamps = [obs.timestamp for obs in self.observations]
+
+        for i in range(1, len(timestamps)):
+            gap = (timestamps[i] - timestamps[i - 1]).total_seconds()
+            if gap >= MAX_GAP_SECONDS:
+                raise ValueError(
+                    f"Temporal gap of {gap} seconds between observations at index "
+                    f"{i-1} and {i} exceeds maximum allowed {MAX_GAP_SECONDS} seconds"
+                )
+
+        return self
+
+
