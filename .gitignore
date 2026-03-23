@@ -1,0 +1,61 @@
+# -----------------------------
+# Python bytecode and cache
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -----------------------------
+# Pytest cache
+# -----------------------------
+.pytest_cache/
+.cache/
+
+# -----------------------------
+# Build / packaging artifacts
+# -----------------------------
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# -----------------------------
+# IDE / Editor files
+# -----------------------------
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+
+# -----------------------------
+# OS-specific files
+# -----------------------------
+.DS_Store
+Thumbs.db
+TESLA-PROTOCOL_MASTER.md
+# -----------------------------
+# Logs
+# -----------------------------
+*.log
+
+# -----------------------------
+# Local development artifacts
+# -----------------------------
+*.swp
+*.swo

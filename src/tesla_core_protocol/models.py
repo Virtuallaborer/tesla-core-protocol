@@ -178,7 +178,8 @@ class Observation(BaseModel):
     
 from pydantic import Field
 
-    
+#ObservationStreamBaseModel BEGIN---
+  
 class ObservationStream(BaseModel):
     model_config = ConfigDict(
         strict=True,
@@ -211,4 +212,110 @@ class ObservationStream(BaseModel):
 
         return self
 
-    
+    @model_validator(mode="after")
+    def enforce_source_adjacency(self):
+        # No adjacency to check if fewer than 2 observations
+        if len(self.observations) < 2:
+            return self
+
+        for prev, curr in zip(self.observations, self.observations[1:]):
+        # Minimal rule for Invariant 4.1:
+        # Reject system → user transitions
+                        # Invariant 4.2:
+        # Reject environment → memory transitions
+                        # Invariant 4.3:
+        # Reject user → tool transitions
+                        # Invariant 4.4:
+        # Reject tool → memory transitions
+                        # Invariant 4.5:
+        # Reject system → memory transitions
+                # Invariant 4.6:
+        # Reject memory → system transitions
+                # Invariant 4.7:
+        # Reject tool → system transitions
+                # Invariant 4.8:
+        # Reject environment → system transitions
+                # Invariant 4.9:
+        # Reject user → system transitions
+                # Invariant 4.10:
+        # Reject memory → user transitions
+                # Invariant 4.11:
+        # Reject tool → user transitions
+                # Invariant 4.12:
+        # Reject memory → tool transitions
+                # Invariant 4.13:
+        # Reject memory → environment transitions
+                # Invariant 4.15:
+        # Reject tool → environment transitions
+            if prev.source == "tool" and curr.source == "environment":
+                raise ValueError(
+                    "Invalid source transition: tool → environment"
+            )
+        
+            if prev.source == "memory" and curr.source == "environment":
+                raise ValueError(
+                    "Invalid source transition: memory → environment"
+            )
+
+            if prev.source == "memory" and curr.source == "tool":
+                raise ValueError(
+                    "Invalid source transition: memory → tool"
+            )
+
+            if prev.source == "tool" and curr.source == "user":
+                raise ValueError(
+                    "Invalid source transition: tool → user"
+            )
+
+            if prev.source == "memory" and curr.source == "user":
+                raise ValueError(
+                    "Invalid source transition: memory → user"
+            )
+
+            if prev.source == "user" and curr.source == "system":
+                raise ValueError(
+                "Invalid source transition: user → system"
+            )
+
+            if prev.source == "environment" and curr.source == "system":
+                raise ValueError(
+                "Invalid source transition: environment → system"
+            )
+
+            if prev.source == "tool" and curr.source == "system":
+                raise ValueError(
+                "Invalid source transition: tool → system"
+            )
+
+            if prev.source == "memory" and curr.source == "system":
+                raise ValueError(
+                "Invalid source transition: memory → system"
+            )
+
+            if prev.source == "system" and curr.source == "memory":
+                raise ValueError(
+                "Invalid source transition: system → memory"
+            )
+
+            if prev.source == "tool" and curr.source == "memory":
+                raise ValueError(
+                "Invalid source transition: tool → memory"
+            )
+
+            if prev.source == "user" and curr.source == "tool":
+                raise ValueError(
+                "Invalid source transition: user → tool"
+            )
+
+            if prev.source == "environment" and curr.source == "memory":
+                raise ValueError(
+                    "Invalid source transition: environment → memory"
+                )
+
+            if prev.source == "system" and curr.source == "user":
+                raise ValueError(
+                    "Invalid source transition: system → user"
+                )
+
+        return self
+ 
