@@ -447,5 +447,29 @@ class ObservationStream(BaseModel):
                 )
 
         return self
+    
+class ReasoningTree(BaseModel):
+    model_config = ConfigDict(
+        strict=True,
+        from_attributes=True,
+    )
+
+    id: str
+    root_context: ObservationStream
+    branches: dict[str, ObservationStream | list[ObservationStream]]
+    provenance: Provenance
+    selected_branch: str | None = None
+    selection_justification: dict | None = None
+    branch_scores: dict[str, int] | None = None
+    branch_ranking: list[tuple[str, int]] | None = None
+    selected_branch_trace: list[Observation] | None = None
+    branch_metadata: dict[str, dict] | None = None
+    summary: dict | None = None
+
+
+
+
+
+
 
 

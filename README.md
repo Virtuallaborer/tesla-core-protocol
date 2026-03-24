@@ -1,12 +1,9 @@
 # ⭐ **UPDATED README.md (Authoritative — March 2026)**  
-### *Reflecting Subsystem 6.2.6 and 66 passing tests*
-
----
-
+### *Reflecting Subsystems 6.3–6.4 and 78 passing tests*
 # 🔷 TESLA Core Protocol  
 *A truth‑preserving substrate for deterministic agentic intelligence*
 
-The **TESLA Core Protocol** is a foundational architecture for building **provenance‑anchored**, **deterministic**, and **truth‑preserving** agentic systems. It defines strict invariants for observations, provenance, temporal ordering, source adjacency, and deterministic reasoning, forming a substrate that higher‑order cognitive systems can rely on without contradiction.
+The **TESLA Core Protocol** is a foundational architecture for building **provenance‑anchored**, **deterministic**, and **truth‑preserving** agentic systems. It defines strict invariants for observations, provenance, temporal ordering, source adjacency, deterministic reasoning, and introspective reasoning trees.
 
 This repository contains the **reference implementation** of the protocol in Python using **Pydantic v2**, along with a comprehensive test suite enforcing all invariants through strict TDD.
 
@@ -23,6 +20,8 @@ The TESLA Core Protocol solves this by defining:
 - A **source‑adjacency lattice** that prevents impossible transitions  
 - A **stream‑level identity substrate**  
 - A **deterministic reasoning engine**  
+- A **deterministic reasoning tree engine**  
+- A **deterministic pruning mechanism**  
 - A **test‑driven, invariant‑driven development cycle**  
 
 This creates a substrate where higher‑order agentic behavior can emerge safely and predictably.
@@ -51,18 +50,20 @@ Subsystems 3, 4, and 5 are fully sealed.
 ---
 
 ## **6 → Orchestration (Current Phase)**  
-Subsystems begin coordinating:
+Subsystems coordinate deterministic reasoning:
 
 - Deterministic logic (Interpreter)  
 - Multi‑step reasoning  
 - Chain‑level provenance  
 - Chain‑level confidence  
 - Deterministic halting  
+- Deterministic reasoning trees  
+- Deterministic branch pruning  
 - Multi‑stream coherence (future)  
 - Memory consolidation (future)  
 - Tool orchestration (future)  
 
-Subsystem 6.1 and 6.2 are now complete.
+Subsystems **6.1 through 6.4 are now complete**.
 
 ---
 
@@ -78,13 +79,14 @@ Higher‑order behavior emerges from the substrate:
 
 # 🔷 Current Project State (March 2026)
 
-The protocol defines **three Pydantic v2 models**:
+The protocol defines **four Pydantic v2 models**:
 
 - `Provenance`  
 - `Observation`  
-- `ObservationStream`
+- `ObservationStream`  
+- `ReasoningTree`  
 
-The test suite contains **66 tests**, all passing, enforcing:
+The test suite contains **78 tests**, all passing, enforcing:
 
 ---
 
@@ -99,7 +101,8 @@ The test suite contains **66 tests**, all passing, enforcing:
 - **deterministic SHA‑256 hashing** (6.1.3)  
 - **monotonic hash carryover** (6.1.4)  
 - **chain‑level aggregated hash** (6.2.4)  
-- **chain‑level aggregated confidence** (6.2.5)
+- **chain‑level aggregated confidence** (6.2.5)  
+- **tree‑level aggregated provenance** (6.3.10, 6.4.1)
 
 ---
 
@@ -109,10 +112,9 @@ The test suite contains **66 tests**, all passing, enforcing:
 - timezone‑naive  
 - ≥ Unix epoch  
 - ≤ now + 1s drift  
-- globally unique ID (`obs_…`)  
-- **strictly increasing IDs** (5.4)  
-- UTF‑8 safe content  
-- ≤ 10,000 chars  
+- globally unique ID (`obs_sys_000001`, …)  
+- **deterministic ID generation** (6.1.1)  
+- **strictly increasing timestamps** (6.1.2)  
 - **deterministic content derivation** (6.1.5)  
 - source ∈ {user, memory, tool, environment, system}
 
@@ -143,8 +145,6 @@ All **15 forbidden transitions** are enforced.
 ---
 
 # ✔ Subsystem 5 — Stream Identity & Structural Integrity (Complete)
-
-Subsystem 5 introduces stream‑level invariants:
 
 - Stream ID well‑formedness  
 - Stream non‑empty  
@@ -179,6 +179,30 @@ Subsystem 5 introduces stream‑level invariants:
 
 ---
 
+# ✔ Subsystem 6.3 — Deterministic Reasoning Trees (Complete)
+
+- multi‑branch deterministic reasoning  
+- deterministic branch selection  
+- deterministic justification  
+- deterministic scoring  
+- deterministic ranking  
+- deterministic trace extraction  
+- deterministic branch metadata  
+- deterministic tree summary  
+
+---
+
+# ✔ Subsystem 6.4 — Deterministic Branch Pruning (Complete)
+
+- prune to top‑ranked branches  
+- recompute selected branch  
+- recompute selected branch trace  
+- recompute tree‑level provenance  
+- recompute summary  
+- preserve all invariants  
+
+---
+
 # 🔷 TDD Workflow (Strict)
 
 All development follows a strict invariant‑driven TDD cycle:
@@ -202,7 +226,8 @@ tesla-core-protocol/
 ├── models/
 │   ├── observation.py
 │   ├── provenance.py
-│   └── stream.py
+│   ├── stream.py
+│   └── reasoning_tree.py
 │
 ├── interpreter/
 │   └── deterministic_interpreter.py
@@ -221,14 +246,15 @@ tesla-core-protocol/
 
 # 🔷 Roadmap
 
-### **Phase 3 (Foundations) — Complete through Subsystem 5.9**  
-### **Phase 6 (Orchestration) — Current**  
+### **Phase 3 (Foundations) — Complete**  
+### **Phase 6 (Orchestration) — In Progress**  
 - Subsystem 6.1: Deterministic Logic Engine ✔  
 - Subsystem 6.2: Deterministic Multi‑Step Reasoning ✔  
-- Subsystem 6.3: Deterministic Reasoning Trees ⟶ *Next*  
-- Subsystem 6.4: Multi‑stream coherence  
-- Subsystem 6.5: Memory consolidation  
-- Subsystem 6.6: Tool orchestration  
+- Subsystem 6.3: Deterministic Reasoning Trees ✔  
+- Subsystem 6.4: Deterministic Branch Pruning ✔  
+- Subsystem 6.5: Multi‑stream coherence ⟶ *Next*  
+- Subsystem 6.6: Memory consolidation  
+- Subsystem 6.7: Tool orchestration  
 
 ### **Phase 9 (Emergence)**  
 - Agentic reasoning  
@@ -247,15 +273,3 @@ All invariants must be introduced through failing tests.
 # 🔷 License
 
 MIT License (or your preferred license).
-
----
-
-Patrick — this README is now aligned with the full maturity of Subsystem 6.2.6.
-
-If you want, I can now:
-
-- generate the commit message  
-- generate the PR description  
-- and walk you through the exact git commands to lock this into GitHub  
-
-Just say the word and we’ll seal this state into the repository.

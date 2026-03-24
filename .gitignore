@@ -49,6 +49,8 @@ dist/
 .DS_Store
 Thumbs.db
 TESLA_PROTOCOL_MASTER.md
+CURRENT-CONTIUATION-PROMPT.txt
+demo_observations.py
 # -----------------------------
 # Logs
 # -----------------------------
