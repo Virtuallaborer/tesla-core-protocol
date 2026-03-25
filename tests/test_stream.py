@@ -1,7 +1,11 @@
 import pytest
 from datetime import datetime, timedelta
 from pydantic import ValidationError
-from tesla_core_protocol.models import Observation, ObservationStream
+from tesla_core_protocol.models import Observation, ObservationStream, Provenance
+from tesla_core_protocol.models import ReasoningTree
+
+
+
 
 
 def test_observation_stream_enforces_monotonic_timestamps():

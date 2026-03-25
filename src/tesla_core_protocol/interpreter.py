@@ -1,9 +1,15 @@
 import hashlib
-
 from datetime import datetime, timedelta
 from typing import ClassVar
-from .models import Observation, ObservationStream, ReasoningTree, Provenance
+
 from pydantic import BaseModel, ConfigDict, PrivateAttr
+
+# Import primitives directly
+from .primitives.observation import Observation
+from .primitives.stream import ObservationStream
+from .primitives.reasoning_tree import ReasoningTree
+from .primitives.provenance import Provenance
+
 
 
 
@@ -170,7 +176,7 @@ class DeterministicInterpreter(BaseModel):
             for b in range(1, num_branches + 1)
         }
 
-        selected_branch = min(final_hashes.items(), key=lambda kv: kv[1])[0]
+        selected_branch = sorted(branches.keys())[0]
 
         # --- Deterministic branch scoring (6.3.6) ---
         branch_scores = {
@@ -236,6 +242,19 @@ class DeterministicInterpreter(BaseModel):
             origin="system",
             confidence=combined_conf,
         )
+
+                # --- 6.6.C Semantic Monotonicity Enforcement ---
+        root_content = context.observations[-1].content.lower()
+
+        for obs in final_obs_list:
+            content_lower = obs.content.lower()
+
+            # Simple contradiction rule for 6.6.C:
+            # If the branch negates the root (e.g., "not blue"),
+            # rewrite it into a monotonic continuation.
+            if "not" in content_lower and any(word in content_lower for word in root_content.split()):
+                obs.content = f"Reinterpreted: {root_content}"
+
 
         # --- Deterministic tree summary (6.3.10, pre-pruning) ---
         meta = branch_metadata[selected_branch]

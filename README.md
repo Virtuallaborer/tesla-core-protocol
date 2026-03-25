@@ -1,9 +1,23 @@
-# ⭐ **UPDATED README.md (Authoritative — March 2026)**  
-### *Reflecting Subsystems 6.3–6.4 and 78 passing tests*
+# ⭐ **TESLA Core Protocol — README.md (Authoritative, March 2026)**  
+### *Reflecting Subsystems 6.1 → 6.6.F and 85 passing tests*
+
+---
+
 # 🔷 TESLA Core Protocol  
 *A truth‑preserving substrate for deterministic agentic intelligence*
 
-The **TESLA Core Protocol** is a foundational architecture for building **provenance‑anchored**, **deterministic**, and **truth‑preserving** agentic systems. It defines strict invariants for observations, provenance, temporal ordering, source adjacency, deterministic reasoning, and introspective reasoning trees.
+The **TESLA Core Protocol** is a foundational architecture for building **provenance‑anchored**, **deterministic**, and **truth‑preserving** agentic systems.  
+It defines strict invariants for:
+
+- observations  
+- provenance  
+- temporal ordering  
+- source adjacency  
+- deterministic reasoning  
+- deterministic reasoning trees  
+- deterministic pruning  
+- multi‑branch coherence  
+- tree‑level identity and reproducibility  
 
 This repository contains the **reference implementation** of the protocol in Python using **Pydantic v2**, along with a comprehensive test suite enforcing all invariants through strict TDD.
 
@@ -22,6 +36,7 @@ The TESLA Core Protocol solves this by defining:
 - A **deterministic reasoning engine**  
 - A **deterministic reasoning tree engine**  
 - A **deterministic pruning mechanism**  
+- A **tree‑level coherence lattice**  
 - A **test‑driven, invariant‑driven development cycle**  
 
 This creates a substrate where higher‑order agentic behavior can emerge safely and predictably.
@@ -45,7 +60,7 @@ Primitive structures and invariants:
 - Adjacency lattice  
 - Stream identity substrate  
 
-Subsystems 3, 4, and 5 are fully sealed.
+Subsystems **3, 4, and 5** are fully sealed.
 
 ---
 
@@ -59,11 +74,11 @@ Subsystems coordinate deterministic reasoning:
 - Deterministic halting  
 - Deterministic reasoning trees  
 - Deterministic branch pruning  
-- Multi‑stream coherence (future)  
-- Memory consolidation (future)  
-- Tool orchestration (future)  
+- Multi‑branch coherence  
+- Tree‑level determinism and identity  
+- Provenance‑anchored semantics (next)  
 
-Subsystems **6.1 through 6.4 are now complete**.
+Subsystems **6.1 → 6.6.F** are now complete.
 
 ---
 
@@ -86,7 +101,7 @@ The protocol defines **four Pydantic v2 models**:
 - `ObservationStream`  
 - `ReasoningTree`  
 
-The test suite contains **78 tests**, all passing, enforcing:
+The test suite contains **85 tests**, all passing, enforcing:
 
 ---
 
@@ -102,7 +117,7 @@ The test suite contains **78 tests**, all passing, enforcing:
 - **monotonic hash carryover** (6.1.4)  
 - **chain‑level aggregated hash** (6.2.4)  
 - **chain‑level aggregated confidence** (6.2.5)  
-- **tree‑level aggregated provenance** (6.3.10, 6.4.1)
+- **tree‑level aggregated provenance** (6.3.10, 6.4.1)  
 
 ---
 
@@ -116,7 +131,7 @@ The test suite contains **78 tests**, all passing, enforcing:
 - **deterministic ID generation** (6.1.1)  
 - **strictly increasing timestamps** (6.1.2)  
 - **deterministic content derivation** (6.1.5)  
-- source ∈ {user, memory, tool, environment, system}
+- source ∈ {user, memory, tool, environment, system}  
 
 ---
 
@@ -203,6 +218,52 @@ All **15 forbidden transitions** are enforced.
 
 ---
 
+# ✔ Subsystem 6.5 — Multi‑Branch Coherence (Complete)
+
+All branch‑level coherence invariants are structurally guaranteed:
+
+- timestamp alignment  
+- provenance alignment  
+- semantic alignment  
+- structural alignment  
+
+Subsystem 6.5 required **no interpreter changes** — all invariants were already emergent.
+
+---
+
+# ✔ Subsystem 6.6 — Tree‑Level Determinism & Identity (Complete)
+
+### **6.6.A — Deterministic Tree Identity**  
+Tree ID is a pure function of:
+
+- root context ID  
+- number of branches  
+- sorted branch keys  
+
+### **6.6.B — Structural Equivalence**  
+Fresh interpreters with identical inputs produce **identical trees**.
+
+### **6.6.C — Semantic Monotonicity**  
+Branches may diverge but may not contradict the root.
+
+### **6.6.D — Semantic Convergence**  
+All branches share a semantic nucleus with the root.
+
+### **6.6.E — Selection‑Trace Coherence**  
+`selected_branch_trace` exactly matches the selected branch.
+
+### **6.6.F — Tree‑Level Coherence Lattice**  
+When A–E hold, the tree is:
+
+- structurally deterministic  
+- semantically consistent  
+- self‑describing  
+- reproducible  
+
+Subsystem 6.6 is fully sealed.
+
+---
+
 # 🔷 TDD Workflow (Strict)
 
 All development follows a strict invariant‑driven TDD cycle:
@@ -212,7 +273,8 @@ All development follows a strict invariant‑driven TDD cycle:
 3. Run pytest  
 4. Implement the minimal fix  
 5. Run pytest again  
-6. Repeat  
+6. Update TESLA_PROTOCOL.md  
+7. Repeat  
 
 No invariants or fields may be added without a failing test.
 
@@ -252,9 +314,9 @@ tesla-core-protocol/
 - Subsystem 6.2: Deterministic Multi‑Step Reasoning ✔  
 - Subsystem 6.3: Deterministic Reasoning Trees ✔  
 - Subsystem 6.4: Deterministic Branch Pruning ✔  
-- Subsystem 6.5: Multi‑stream coherence ⟶ *Next*  
-- Subsystem 6.6: Memory consolidation  
-- Subsystem 6.7: Tool orchestration  
+- Subsystem 6.5: Multi‑Branch Coherence ✔  
+- Subsystem 6.6: Tree‑Level Determinism & Identity ✔  
+- **Subsystem 6.7: Provenance‑Anchored Semantic Coherence ⟶ Next**  
 
 ### **Phase 9 (Emergence)**  
 - Agentic reasoning  

@@ -1,6 +1,9 @@
 import pytest
 from datetime import datetime
-from tesla_core_protocol.models import Observation, Provenance
+from tesla_core_protocol.models import Observation, ObservationStream, Provenance
+from tesla_core_protocol.models import ReasoningTree
+
+
 import datetime as dt
 
 #Test 1 for the Observation model and its interaction with Provenance, including validation rules and error handling.
