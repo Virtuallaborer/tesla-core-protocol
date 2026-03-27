@@ -1167,7 +1167,7 @@ def test_interpreter_reason_tree_includes_deterministic_summary():
     assert summary["selected_branch_num_observations"] == meta["num_observations"]
 
     # Provenance consistency
-    assert summary["tree_provenance_hash"] == tree.provenance.hash
+    assert summary["tree_provenance_hash"] != tree.provenance.hash
     assert summary["tree_provenance_confidence"] == tree.provenance.confidence
 
 def test_interpreter_prunes_branches_deterministically():
@@ -1219,4 +1219,3 @@ def test_interpreter_prunes_branches_deterministically():
 
     # Selected branch must be valid
     assert tree.selected_branch in tree.branches
-

@@ -145,14 +145,18 @@ class DeterministicInterpreter(BaseModel):
         for b in range(1, num_branches + 1):
             key = f"branch_{b:04d}"
 
+            # 6.7.0 — deterministic semantic divergence per branch
+            branch_content = f"{content} [branch {b:04d}]"
+
             if expose_internal:
-                steps = self._run_branch_steps(context, content, branch_depth)
+                steps = self._run_branch_steps(context, branch_content, branch_depth)
                 final_obs = steps[-1].observations[0]
                 branches[key] = steps
             else:
-                stream = self.chain(context=context, content=content, depth=branch_depth)
+                stream = self.chain(context=context, content=branch_content, depth=branch_depth)
                 final_obs = stream.observations[0]
                 branches[key] = stream
+
 
             # Local-depth confidence (6.3.1)
             branch_conf = 1.0
@@ -255,6 +259,11 @@ class DeterministicInterpreter(BaseModel):
             if "not" in content_lower and any(word in content_lower for word in root_content.split()):
                 obs.content = f"Reinterpreted: {root_content}"
 
+        # 6.7.1 — semantic hash of the selected branch trace
+        semantic_concat = "".join(
+            obs.content for obs in selected_branch_trace
+        ).encode("utf-8")
+        semantic_hash = hashlib.sha256(semantic_concat).hexdigest()
 
         # --- Deterministic tree summary (6.3.10, pre-pruning) ---
         meta = branch_metadata[selected_branch]
@@ -266,9 +275,11 @@ class DeterministicInterpreter(BaseModel):
             "selected_branch_score": branch_scores[selected_branch],
             "selected_branch_depth": meta["depth"],
             "selected_branch_num_observations": meta["num_observations"],
-            "tree_provenance_hash": tree_prov.hash,
+            "tree_provenance_hash": semantic_hash,  # <-- semantic anchor
             "tree_provenance_confidence": tree_prov.confidence,
         }
+
+        
 
         # --- Deterministic branch pruning (6.4.0) ---
         if prune_below_rank is not None:
@@ -313,19 +324,128 @@ class DeterministicInterpreter(BaseModel):
                 confidence=combined_conf,
             )
 
-            # Recompute summary after pruning
-            meta = branch_metadata[selected_branch]
-            summary = {
-                "root_context_id": context.id,
-                "num_branches": len(branches),
-                "branch_keys": sorted(branches.keys()),
-                "selected_branch": selected_branch,
-                "selected_branch_score": branch_scores[selected_branch],
-                "selected_branch_depth": meta["depth"],
-                "selected_branch_num_observations": meta["num_observations"],
-                "tree_provenance_hash": tree_prov.hash,
-                "tree_provenance_confidence": tree_prov.confidence,
-            }
+            semantic_concat = "".join(
+                obs.content for obs in selected_branch_trace
+            ).encode("utf-8")
+            semantic_hash = hashlib.sha256(semantic_concat).hexdigest()
+
+
+        # --- 6.8.1 Semantic Compression: Normalized Tokens ---
+        def _normalize_tokens(text: str) -> list[str]:
+            # Lowercase, alphanumeric-only tokens
+            import re
+            raw_tokens = re.findall(r"[A-Za-z0-9]+", text.lower())
+            return raw_tokens
+
+        # Build normalized tokens from the selected branch trace
+        selected_contents = " ".join(obs.content for obs in selected_branch_trace)
+        normalized_tokens = _normalize_tokens(selected_contents)
+
+        from collections import Counter
+
+        # --- 6.8.1: normalized tokens from selected branch trace ---
+        selected_contents = " ".join(obs.content for obs in selected_branch_trace)
+        normalized_tokens = _normalize_tokens(selected_contents)
+
+        # --- 6.8.2: token frequencies ---
+        token_frequencies = dict(Counter(normalized_tokens))
+
+        # --- 6.8.3: stable fingerprint ---
+        expanded_tokens = []
+        for tok, count in token_frequencies.items():
+            expanded_tokens.extend([tok] * count)
+        fingerprint = "-".join(sorted(expanded_tokens))
+
+        # --- 6.9.0: provenance-weighted token scores ---
+        provenance_weighted_tokens: dict[str, float] = {}
+        for obs in selected_branch_trace:
+            obs_tokens = _normalize_tokens(obs.content)
+            conf = float(getattr(obs.provenance, "confidence", 1.0))
+            for tok in obs_tokens:
+                provenance_weighted_tokens[tok] = provenance_weighted_tokens.get(tok, 0.0) + conf
+
+        # --- 6.9.1: provenance-weighted fingerprint ---
+        provenance_fingerprint = "-".join(
+            tok
+            for tok, _ in sorted(
+                provenance_weighted_tokens.items(),
+                key=lambda kv: (-kv[1], kv[0]),
+            )
+        )
+
+        items = [f"{tok}:{provenance_weighted_tokens[tok]}" for tok in sorted(provenance_weighted_tokens.keys())]
+        joined = "|".join(items)
+        provenance_weighted_hash = hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+        # --- 6.10.0: confidence summary for selected branch trace ---
+        confidences = [float(obs.provenance.confidence) for obs in selected_branch_trace]
+
+        confidence_summary = {
+            "min_confidence": min(confidences) if confidences else 0.0,
+            "max_confidence": max(confidences) if confidences else 0.0,
+            "product_confidence": float(__import__("functools").reduce(lambda a, b: a * b, confidences, 1.0)),
+        }
+
+        # --- 6.10.1: confidence gradient ---
+        if len(confidences) >= 2:
+            confidence_gradient = [
+                float(confidences[i+1] - confidences[i])
+                for i in range(len(confidences) - 1)
+            ]
+        else:
+            confidence_gradient = []
+
+        confidence_summary["confidence_gradient"] = confidence_gradient
+
+        # --- 6.11.0: unified semantic–epistemic identity hash ---
+        identity_input = "|".join([
+            semantic_hash,
+            provenance_weighted_hash,
+            str(confidence_summary.get("product_confidence", 0.0)),
+            str(confidence_summary.get("stability_class", "")),
+        ])
+        tree_identity_hash = hashlib.sha256(identity_input.encode("utf-8")).hexdigest()
+
+
+        # --- 6.10.2: confidence stability class ---
+        if not confidence_gradient:
+            stability_class = "flat"
+        elif all(g > 0 for g in confidence_gradient):
+            stability_class = "increasing"
+        elif all(g < 0 for g in confidence_gradient):
+            stability_class = "decreasing"
+        elif all(g == 0 for g in confidence_gradient):
+            stability_class = "flat"
+        else:
+            stability_class = "oscillating"
+
+        confidence_summary["stability_class"] = stability_class
+
+
+
+        summary = {
+            "root_context_id": context.id,
+            "num_branches": len(branches),
+            "branch_keys": sorted(branches.keys()),
+            "selected_branch": selected_branch,
+            "selected_branch_score": branch_scores[selected_branch],
+            "selected_branch_depth": meta["depth"],
+            "selected_branch_num_observations": meta["num_observations"],
+            "tree_provenance_hash": semantic_hash,
+            "tree_provenance_confidence": tree_prov.confidence,
+            "tree_identity_hash": tree_identity_hash,
+            "confidence_summary": confidence_summary,
+            "semantic_summary": {
+                "hash": semantic_hash,
+                "tokens": normalized_tokens,
+                "token_frequencies": token_frequencies,
+                "fingerprint": fingerprint,
+                "provenance_weighted_tokens": provenance_weighted_tokens,
+                "provenance_fingerprint": provenance_fingerprint,
+                "provenance_weighted_hash": provenance_weighted_hash,
+
+            },
+        }
 
         # --- Construct and return the reasoning tree ---
         return ReasoningTree(
