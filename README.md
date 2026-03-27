@@ -65,4 +65,4 @@ All invariants must be introduced through failing tests.
 
 # 🔷 License
 
-MIT License (or your preferred license).
+MIT License

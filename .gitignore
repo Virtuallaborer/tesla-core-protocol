@@ -49,6 +49,7 @@ dist/
 .DS_Store
 Thumbs.db
 TESLA_PROTOCOL_MASTER.md
+TESLA_PROTOCOL_MASTER-backup.md
 CURRENT-CONTIUATION-PROMPT.txt
 demo_observations.py
 TESLA-VISION-OUTLINE.md
