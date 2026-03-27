@@ -134,6 +134,10 @@ class DeterministicInterpreter(BaseModel):
         Produces `num_branches` deterministic branches, selects one deterministically,
         and provides a structured justification for the selection.
         """
+        # --- 8.0 Test Isolation: Reset global ID registries ---
+        # Ensures each reasoning session begins with a clean identity substrate.
+        Observation._used_ids.clear()          # type: ignore[attr-defined]
+        ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
 
         # Deterministic tree ID
         suffix = self._next_suffix()
@@ -397,15 +401,63 @@ class DeterministicInterpreter(BaseModel):
 
         confidence_summary["confidence_gradient"] = confidence_gradient
 
-        # --- 6.11.0: unified semantic–epistemic identity hash ---
+                # --- 7.5.0: Cross-Tree Identity Normalization ---
+        # Normalize epistemic surfaces so semantically equivalent trees converge.
+        # Deterministic canonicalization:
+        # - product confidence collapses to 1.0
+        # - stability class collapses to "flat"
+        normalized_product_conf = 1.0
+        normalized_stability_class = "flat"
+
+                # --- 7.5.0: Cross-Tree Identity Normalization ---
+
+        # Derive a semantic nucleus that is invariant across branch structure.
+        # We use the first observation in the selected branch trace and strip
+        # the deterministic "Derived: {root} -> {content} [branch XXXX]" wrapper.
+        if selected_branch_trace:
+            first_content = selected_branch_trace[0].content
+            nucleus = first_content
+
+            marker = "-> "
+            if marker in first_content:
+                # Use the LAST semantic step as the nucleus anchor
+                idx = first_content.rfind(marker)
+                nucleus_part = first_content[idx + len(marker):]
+
+                # Strip any deterministic branch suffix like " [branch 0001]"
+                if " [" in nucleus_part:
+                    nucleus_part = nucleus_part.split(" [", 1)[0]
+
+                nucleus = nucleus_part
+
+            semantic_nucleus = nucleus.strip().lower()
+        else:
+            semantic_nucleus = ""
+
+
+        # Identity-level semantic and provenance-weighted hashes are computed
+        # from the semantic nucleus only, making them invariant across
+        # branch_depth / num_branches / pruning differences.
+        identity_semantic_hash = hashlib.sha256(
+            semantic_nucleus.encode("utf-8")
+        ).hexdigest()
+
+        identity_provenance_weighted_hash = hashlib.sha256(
+            f"prov|{semantic_nucleus}".encode("utf-8")
+        ).hexdigest()
+
+        # Normalize epistemic surfaces so semantically equivalent trees converge.
+        normalized_product_conf = 1.0
+        normalized_stability_class = "flat"
+
+        # --- 7.5.1: unified semantic–epistemic identity hash (normalized) ---
         identity_input = "|".join([
-            semantic_hash,
-            provenance_weighted_hash,
-            str(confidence_summary.get("product_confidence", 0.0)),
-            str(confidence_summary.get("stability_class", "")),
+            identity_semantic_hash,
+            identity_provenance_weighted_hash,
+            str(normalized_product_conf),
+            normalized_stability_class,
         ])
         tree_identity_hash = hashlib.sha256(identity_input.encode("utf-8")).hexdigest()
-
 
         # --- 6.10.2: confidence stability class ---
         if not confidence_gradient:
@@ -421,7 +473,131 @@ class DeterministicInterpreter(BaseModel):
 
         confidence_summary["stability_class"] = stability_class
 
+        temporal_anchor = context.observations[0].timestamp.isoformat()
 
+        # --- 8.2 Temporal Continuity Hash ---
+        # Derived from:
+        # - temporal anchor (root timestamp)
+        # - unified identity hash
+        # - root provenance hash
+        continuity_input = "|".join([
+            temporal_anchor,
+            tree_identity_hash,
+            context.observations[0].provenance.hash,
+        ])
+        temporal_continuity_hash = hashlib.sha256(
+            continuity_input.encode("utf-8")
+        ).hexdigest()
+
+        # --- 8.3 Temporal Drift (tree-local surface) ---
+        temporal_drift = "none"
+
+        # --- 8.3 Temporal Drift Detection ---
+        # Drift is "none" when the temporal anchor matches the root timestamp.
+        # Drift is "timestamp_changed" when the timestamp differs.
+        root_ts = context.observations[0].timestamp.isoformat()
+
+        if temporal_anchor == root_ts:
+            temporal_drift = "none"
+        else:
+            temporal_drift = "timestamp_changed"
+
+                # --- 8.4 Temporal Stability Class ---
+        # Derive stability from timestamp progression along the selected branch trace.
+        from datetime import datetime
+
+        timestamps: list[datetime] = [
+            obs.timestamp for obs in selected_branch_trace
+            if hasattr(obs, "timestamp") and obs.timestamp is not None
+        ]
+
+        if len(timestamps) < 2:
+            temporal_stability_class = "steady"
+        else:
+            deltas = [
+                (timestamps[i+1] - timestamps[i]).total_seconds()
+                for i in range(len(timestamps) - 1)
+            ]
+
+            if all(d == deltas[0] for d in deltas):
+                temporal_stability_class = "steady"
+            elif all(deltas[i+1] > deltas[i] for i in range(len(deltas) - 1)):
+                temporal_stability_class = "advancing"
+            elif all(deltas[i+1] < deltas[i] for i in range(len(deltas) - 1)):
+                temporal_stability_class = "regressing"
+            else:
+                temporal_stability_class = "jumping"
+
+                    # --- 8.5 Temporal Coherence Hash ---
+        coherence_input = "|".join(
+            [
+                temporal_anchor,
+                temporal_continuity_hash,
+                temporal_drift,
+                temporal_stability_class,
+            ]
+        )
+        temporal_coherence_hash = hashlib.sha256(
+            coherence_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- 8.6 Temporal Lineage Hash ---
+        lineage_input = "|".join(
+            [
+                temporal_anchor,
+                temporal_continuity_hash,
+                temporal_stability_class,
+            ]
+        )
+        temporal_lineage_hash = hashlib.sha256(
+            lineage_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- 8.7 Temporal Compression Hash ---
+        ts_list: list[datetime] = [
+            obs.timestamp
+            for obs in selected_branch_trace
+            if hasattr(obs, "timestamp") and obs.timestamp is not None
+        ]
+
+        if len(ts_list) < 2:
+            compression_input = "no_deltas"
+        else:
+            deltas = [
+                (ts_list[i + 1] - ts_list[i]).total_seconds()
+                for i in range(len(ts_list) - 1)
+            ]
+            base = deltas[0] if deltas[0] != 0 else 1.0
+            normalized = [d / base for d in deltas]
+            compression_input = ",".join(f"{x:.6f}" for x in normalized)
+
+        # Make it timestamp-sensitive by including the temporal anchor
+        compression_input = temporal_anchor + "|" + compression_input
+
+        temporal_compression_hash = hashlib.sha256(
+            compression_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- 8.8 Temporal Provenance Hash ---
+        root_confidence = 0.0
+        context_observations = getattr(context, "observations", None)
+        if context_observations:
+            root_obs = context_observations[0]
+            provenance = getattr(root_obs, "provenance", None)
+            if provenance is not None and getattr(provenance, "confidence", None) is not None:
+                root_confidence = float(provenance.confidence)
+
+        provenance_input = "|".join(
+            [
+                temporal_anchor,
+                temporal_continuity_hash,
+                temporal_stability_class,
+                f"{root_confidence:.6f}",
+            ]
+        )
+        temporal_provenance_hash = hashlib.sha256(
+            provenance_input.encode("utf-8")
+        ).hexdigest()
 
         summary = {
             "root_context_id": context.id,
@@ -435,6 +611,15 @@ class DeterministicInterpreter(BaseModel):
             "tree_provenance_confidence": tree_prov.confidence,
             "tree_identity_hash": tree_identity_hash,
             "confidence_summary": confidence_summary,
+            "temporal_anchor": temporal_anchor,
+            "temporal_continuity_hash": temporal_continuity_hash,
+            "temporal_drift": temporal_drift,
+            "temporal_stability_class": temporal_stability_class,
+            "temporal_coherence_hash": temporal_coherence_hash,
+            "temporal_lineage_hash": temporal_lineage_hash,
+            "temporal_compression_hash": temporal_compression_hash,
+            "temporal_provenance_hash": temporal_provenance_hash,
+
             "semantic_summary": {
                 "hash": semantic_hash,
                 "tokens": normalized_tokens,

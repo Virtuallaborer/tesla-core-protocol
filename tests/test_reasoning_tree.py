@@ -1551,8 +1551,275 @@ def test_reasoning_tree_includes_unified_identity_hash_and_is_stable():
 
     assert s1["tree_identity_hash"] == s2["tree_identity_hash"]
 
+def test_cross_tree_identity_convergence_for_semantically_equivalent_trees():
+    # Reset registries to avoid ID collisions across runs
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
 
+    fixed_ts = datetime(2020, 1, 1, 0, 0, 0)
 
+    root = ObservationStream(
+        id="stream_root_7_5_0001",
+        observations=[
+            Observation(
+                id="obs_root_7_5_0001",
+                timestamp=fixed_ts,
+                source="user",
+                content="cross-tree identity anchor",
+                provenance=Provenance(
+                    hash="abc123" * 5 + "ab",
+                    origin="user",
+                    confidence=0.9,
+                ),
+            )
+        ],
+    )
 
+    # First tree: shallower, fewer branches
+    interp1 = DeterministicInterpreter()
+    tree1 = interp1.reason_tree(
+        context=root,
+        content="semantically equivalent identity payload",
+        branch_depth=2,
+        num_branches=2,
+        prune_below_rank=2,
+    )
+
+    # Reset registries to force structurally different IDs in the second tree
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    # Second tree: deeper, more branches (different structure),
+    # but same semantic nucleus in the input payload.
+    interp2 = DeterministicInterpreter()
+    tree2 = interp2.reason_tree(
+        context=root,
+        content="semantically equivalent identity payload",
+        branch_depth=3,
+        num_branches=3,
+        prune_below_rank=3,
+    )
+
+    s1 = tree1.summary
+    s2 = tree2.summary
+
+    # Both trees should expose a unified identity hash
+    assert "tree_identity_hash" in s1
+    assert "tree_identity_hash" in s2
+    assert isinstance(s1["tree_identity_hash"], str)
+    assert isinstance(s2["tree_identity_hash"], str)
+
+    # Subsystem 7.5 invariant:
+    # Semantically equivalent trees (same nucleus, different structure)
+    # must converge to the same unified identity hash.
+    assert (
+        s1["tree_identity_hash"] == s2["tree_identity_hash"]
+    ), "Semantically equivalent trees must converge to the same unified identity hash under Subsystem 7.5"
+
+def test_identity_preserving_transformations_do_not_change_unified_identity_hash():
+    # Reset registries
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    from datetime import datetime
+    fixed_ts = datetime(2020, 1, 1, 0, 0, 0)
+
+    root = ObservationStream(
+        id="stream_root_7_6_0001",
+        observations=[
+            Observation(
+                id="obs_root_7_6_0001",
+                timestamp=fixed_ts,
+                source="user",
+                content="identity transform anchor",
+                provenance=Provenance(
+                    hash="abc123" * 5 + "ab",
+                    origin="user",
+                    confidence=0.9,
+                ),
+            )
+        ],
+    )
+
+    # Base tree
+    interp1 = DeterministicInterpreter()
+    tree1 = interp1.reason_tree(
+        context=root,
+        content="identity transform payload",
+        branch_depth=2,
+        num_branches=2,
+        prune_below_rank=2,
+    )
+
+    # Reset registries to force structural differences
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    # Transformed tree: add an extra inference step BEFORE reasoning
+    # This transformation does NOT change the semantic nucleus.
+    interp2 = DeterministicInterpreter()
+    extra_step = interp2.infer(
+        context=root,
+        content="identity transform payload"
+    )
+
+    tree2 = interp2.reason_tree(
+        context=extra_step,
+        content="identity transform payload",
+        branch_depth=2,
+        num_branches=2,
+        prune_below_rank=2,
+    )
+
+    s1 = tree1.summary
+    s2 = tree2.summary
+
+    # Both trees must expose identity hashes
+    assert "tree_identity_hash" in s1
+    assert "tree_identity_hash" in s2
+
+    # Subsystem 7.6 invariant:
+    # Identity-preserving transformations must not change the unified identity hash.
+    assert (
+        s1["tree_identity_hash"] == s2["tree_identity_hash"]
+    ), "Identity-preserving transformations must not alter the unified identity hash under Subsystem 7.6"
+
+def test_identity_stable_under_pruning_when_selected_branch_semantics_unchanged():
+    # Reset registries
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    from datetime import datetime
+    fixed_ts = datetime(2020, 1, 1, 0, 0, 0)
+
+    root = ObservationStream(
+        id="stream_root_7_7_0001",
+        observations=[
+            Observation(
+                id="obs_root_7_7_0001",
+                timestamp=fixed_ts,
+                source="user",
+                content="identity pruning anchor",
+                provenance=Provenance(
+                    hash="abc123" * 5 + "ab",
+                    origin="user",
+                    confidence=0.9,
+                ),
+            )
+        ],
+    )
+
+    # Base tree: no pruning
+    interp1 = DeterministicInterpreter()
+    tree1 = interp1.reason_tree(
+        context=root,
+        content="identity pruning payload",
+        branch_depth=2,
+        num_branches=3,
+        prune_below_rank=None,
+    )
+
+    # Reset registries to force structural differences
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    # Pruned tree: prune to top 2 branches.
+    # As long as the selected branch remains the same and its semantic nucleus
+    # is unchanged, identity must remain stable.
+    interp2 = DeterministicInterpreter()
+    tree2 = interp2.reason_tree(
+        context=root,
+        content="identity pruning payload",
+        branch_depth=2,
+        num_branches=3,
+        prune_below_rank=2,
+    )
+
+    s1 = tree1.summary
+    s2 = tree2.summary
+
+    # Sanity: both expose identity hashes and selected branches
+    assert "tree_identity_hash" in s1
+    assert "tree_identity_hash" in s2
+    assert "selected_branch" in s1
+    assert "selected_branch" in s2
+
+    # 7.7 precondition: selected branch must be the same
+    assert s1["selected_branch"] == s2["selected_branch"]
+
+    # 7.7 invariant:
+    # Pruning that preserves the selected branch's semantic nucleus
+    # must not change the unified identity hash.
+    assert (
+        s1["tree_identity_hash"] == s2["tree_identity_hash"]
+    ), "Identity must remain stable under pruning when the selected branch semantics are unchanged (Subsystem 7.7)"
+
+def test_identity_stable_under_branch_count_changes_when_selected_branch_semantics_unchanged():
+    # Reset registries
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    from datetime import datetime
+    fixed_ts = datetime(2020, 1, 1, 0, 0, 0)
+
+    root = ObservationStream(
+        id="stream_root_7_8_0001",
+        observations=[
+            Observation(
+                id="obs_root_7_8_0001",
+                timestamp=fixed_ts,
+                source="user",
+                content="identity branchcount anchor",
+                provenance=Provenance(
+                    hash="abc123" * 5 + "ab",
+                    origin="user",
+                    confidence=0.9,
+                ),
+            )
+        ],
+    )
+
+    # Base tree: 3 branches
+    interp1 = DeterministicInterpreter()
+    tree1 = interp1.reason_tree(
+        context=root,
+        content="identity branchcount payload",
+        branch_depth=2,
+        num_branches=3,
+        prune_below_rank=3,
+    )
+
+    # Reset registries to force structural differences
+    Observation._used_ids.clear()  # type: ignore[attr-defined]
+    ObservationStream._used_stream_ids.clear()  # type: ignore[attr-defined]
+
+    # Expanded tree: 7 branches
+    interp2 = DeterministicInterpreter()
+    tree2 = interp2.reason_tree(
+        context=root,
+        content="identity branchcount payload",
+        branch_depth=2,
+        num_branches=7,
+        prune_below_rank=7,
+    )
+
+    s1 = tree1.summary
+    s2 = tree2.summary
+
+    # Both trees must expose identity hashes and selected branches
+    assert "tree_identity_hash" in s1
+    assert "tree_identity_hash" in s2
+    assert "selected_branch" in s1
+    assert "selected_branch" in s2
+
+    # 7.8 precondition: selected branch must be the same
+    assert s1["selected_branch"] == s2["selected_branch"]
+
+    # 7.8 invariant:
+    # Changing the number of non-selected branches must not change identity
+    # when the selected branch semantics are unchanged.
+    assert (
+        s1["tree_identity_hash"] == s2["tree_identity_hash"]
+    ), "Identity must remain stable under branch count changes when selected branch semantics are unchanged (Subsystem 7.8)"
 
 
