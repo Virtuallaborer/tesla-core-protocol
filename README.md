@@ -1,4 +1,4 @@
-# 📘 **README.md (Updated — March 2026)**  
+# 📘 **README.md (Updated — July 2026)**  
 ### *Deterministic, Provenance‑Anchored, Temporally‑Coherent Reasoning Substrate*
 
 ---
@@ -76,14 +76,6 @@ Subsystem 7 is a **closed semantic–epistemic identity substrate**.
 
 Subsystem 8 is a **closed temporal identity substrate**.
 
----
-
-# **Test Suite**
-- **119 tests**  
-- **119 passing**  
-- All invariants sealed through Subsystem 8.8  
-
----
 
 ## Current Status — Phase 9 Complete
 
@@ -114,6 +106,15 @@ The protocol can now:
 ### Next Phase: Agent Introduction
 
 With Phase 9 complete, the protocol is ready for Phase 10, where agents will be introduced as first-class entities with their own identity, memory, and continuity surfaces.
+
+---
+
+# **Test Suite**
+- **127 tests**  
+- **127 passing**  
+- All invariants sealed through Subsystem 8.8  
+
+---
 
 
 # **Roadmap**
