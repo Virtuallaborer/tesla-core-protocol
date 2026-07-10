@@ -73,7 +73,6 @@ class DeterministicInterpreter(BaseModel):
         - aggregated confidence over all steps (product of step confidences)
         - minimal early termination when the user content equals the initial context content
         """
-        import hashlib
 
         current = context
         hashes: list[str] = []
@@ -251,7 +250,7 @@ class DeterministicInterpreter(BaseModel):
             confidence=combined_conf,
         )
 
-                # --- 6.6.C Semantic Monotonicity Enforcement ---
+        # --- 6.6.C Semantic Monotonicity Enforcement ---
         root_content = context.observations[-1].content.lower()
 
         for obs in final_obs_list:
@@ -388,7 +387,10 @@ class DeterministicInterpreter(BaseModel):
             "min_confidence": min(confidences) if confidences else 0.0,
             "max_confidence": max(confidences) if confidences else 0.0,
             "product_confidence": float(__import__("functools").reduce(lambda a, b: a * b, confidences, 1.0)),
+            
         }
+
+        product_confidence = confidence_summary["product_confidence"]
 
         # --- 6.10.1: confidence gradient ---
         if len(confidences) >= 2:
@@ -599,6 +601,129 @@ class DeterministicInterpreter(BaseModel):
             provenance_input.encode("utf-8")
         ).hexdigest()
 
+
+        # --- Phase 9.1: Session Identity Anchor ---
+        session_identity_input = "|".join(
+            [
+                identity_semantic_hash,
+                identity_provenance_weighted_hash,
+                f"{normalized_product_conf:.6f}",
+                temporal_coherence_hash,
+            ]
+        )
+
+        session_identity_anchor = hashlib.sha256(
+            session_identity_input.encode("utf-8")
+        ).hexdigest()
+
+        # --- Phase 9.2: Agentic Continuity Surface ---
+        # Derived solely from:
+        # - session_identity_anchor        (Subsystem 9.1)
+        # - tree_identity_hash             (Subsystem 7.5)
+        # - temporal_continuity_hash       (Subsystem 8.2)
+        agentic_continuity_input = "|".join(
+            [
+                session_identity_anchor,
+                tree_identity_hash,
+                temporal_continuity_hash,
+            ]
+        )
+        agentic_continuity_hash = hashlib.sha256(
+            agentic_continuity_input.encode("utf-8")
+        ).hexdigest()
+
+        # --- Phase 9.3: Self-Referential Identity Surface ---
+        self_ref_input = "|".join(
+            [
+                tree_identity_hash,
+                session_identity_anchor,
+                agentic_continuity_hash,
+            ]
+        )
+        self_referential_identity_hash = hashlib.sha256(
+            self_ref_input.encode("utf-8")
+        ).hexdigest()
+
+        # --- Phase 9.4: Multi-Tree Lineage Graph Surface ---
+        lineage_input = "|".join(
+            [
+                self_referential_identity_hash,
+                agentic_continuity_hash,
+                session_identity_anchor,
+            ]
+        )
+        multi_tree_lineage_hash = hashlib.sha256(
+            lineage_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- Phase 9.5: Agentic Memory Substrate ---
+        memory_input = "|".join(
+            [
+                session_identity_anchor,
+                agentic_continuity_hash,
+                self_referential_identity_hash,
+                multi_tree_lineage_hash,
+            ]
+        )
+        memory_identity_hash = hashlib.sha256(
+            memory_input.encode("utf-8")
+        ).hexdigest()
+
+        agentic_memory_object = {
+            "session_identity_anchor": session_identity_anchor,
+            "agentic_continuity_hash": agentic_continuity_hash,
+            "self_referential_identity_hash": self_referential_identity_hash,
+            "multi_tree_lineage_hash": multi_tree_lineage_hash,
+            "memory_identity_hash": memory_identity_hash,
+        }
+
+        # --- Phase 9.6: Memory Stability Class ---
+        stability_input = "|".join(
+            [
+                session_identity_anchor,
+                agentic_continuity_hash,
+                self_referential_identity_hash,
+                multi_tree_lineage_hash,
+                memory_identity_hash,
+            ]
+        )
+        memory_stability_class = hashlib.sha256(
+            stability_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- Phase 9.7: Memory Chain Surface ---
+        memory_chain_input = "|".join(
+            [
+                agentic_memory_object["memory_identity_hash"],
+                memory_stability_class,
+                multi_tree_lineage_hash,
+            ]
+        )
+        memory_chain_hash = hashlib.sha256(
+            memory_chain_input.encode("utf-8")
+        ).hexdigest()
+
+                # --- Phase 9.8: Memory Provenance Surface ---
+        memory_provenance_input = "|".join(
+            [
+                agentic_memory_object["memory_identity_hash"],
+                memory_stability_class,
+                memory_chain_hash,
+                temporal_provenance_hash,
+            ]
+        )
+        memory_provenance_hash = hashlib.sha256(
+            memory_provenance_input.encode("utf-8")
+        ).hexdigest()
+
+        agentic_memory_object = {
+            "session_identity_anchor": session_identity_anchor,
+            "agentic_continuity_hash": agentic_continuity_hash,
+            "self_referential_identity_hash": self_referential_identity_hash,
+            "multi_tree_lineage_hash": multi_tree_lineage_hash,
+            "memory_identity_hash": memory_identity_hash,
+        }
+
         summary = {
             "root_context_id": context.id,
             "num_branches": len(branches),
@@ -607,9 +732,17 @@ class DeterministicInterpreter(BaseModel):
             "selected_branch_score": branch_scores[selected_branch],
             "selected_branch_depth": meta["depth"],
             "selected_branch_num_observations": meta["num_observations"],
+            "self_referential_identity_hash": self_referential_identity_hash,
+            "multi_tree_lineage_hash": multi_tree_lineage_hash,
             "tree_provenance_hash": semantic_hash,
             "tree_provenance_confidence": tree_prov.confidence,
             "tree_identity_hash": tree_identity_hash,
+            "session_identity_anchor": session_identity_anchor,
+            "agentic_continuity_hash": agentic_continuity_hash,
+            "agentic_memory_object": agentic_memory_object,
+            "memory_stability_class": memory_stability_class,
+            "memory_chain_hash": memory_chain_hash,
+            "memory_provenance_hash": memory_provenance_hash,
             "confidence_summary": confidence_summary,
             "temporal_anchor": temporal_anchor,
             "temporal_continuity_hash": temporal_continuity_hash,
