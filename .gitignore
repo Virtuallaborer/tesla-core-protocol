@@ -48,13 +48,8 @@ dist/
 # -----------------------------
 .DS_Store
 Thumbs.db
-TESLA_PROTOCOL_MASTER.md
-TESLA_PROTOCOL_MASTER_backup.md
 CONTIUITY-PROMPT.md
 demo_observations.py
-TESLA-VISION-OUTLINE.md
-TESLA-VISION-OUTLINE-backup.md
-README-BACKUP.md
 PROJECT.md
 VLF-AUTO-RESEARCH-PHASE-V01.md
 VLF-AUTORESEARCH-PLAN-GROK.md
