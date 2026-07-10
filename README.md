@@ -77,7 +77,7 @@ Subsystem 7 is a **closed semantic–epistemic identity substrate**.
 Subsystem 8 is a **closed temporal identity substrate**.
 
 
-## Current Status — Phase 9 Complete
+## Phase 9 Complete
 
 The TESLA Core Protocol has completed Phase 9, establishing the full identity-bearing substrate required for agentic behavior.
 
@@ -118,7 +118,7 @@ With Phase 9 complete, the protocol is ready for Phase 10, where agents will be 
 
 
 # **Roadmap**
-- Phase 10: Cross‑agent identity convergence  <--NEXT PAHSE
+- Phase 10: Cross‑agent identity convergence  <--CURRENT PHASE
 - Phase 11: Distributed provenance fabric  
 
 ---
