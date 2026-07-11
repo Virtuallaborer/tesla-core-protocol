@@ -716,12 +716,19 @@ class DeterministicInterpreter(BaseModel):
             memory_provenance_input.encode("utf-8")
         ).hexdigest()
 
+        # Semantic nucleus identity is anchored to the memory identity surface
+        semantic_nucleus_identity_hash = memory_identity_hash
+
         agentic_memory_object = {
             "session_identity_anchor": session_identity_anchor,
             "agentic_continuity_hash": agentic_continuity_hash,
             "self_referential_identity_hash": self_referential_identity_hash,
             "multi_tree_lineage_hash": multi_tree_lineage_hash,
             "memory_identity_hash": memory_identity_hash,
+            "memory_stability_class": memory_stability_class,
+            "memory_chain_hash": memory_chain_hash,
+            "memory_provenance_hash": memory_provenance_hash,
+            "semantic_nucleus_identity_hash": semantic_nucleus_identity_hash,
         }
 
         summary = {
@@ -743,6 +750,7 @@ class DeterministicInterpreter(BaseModel):
             "memory_stability_class": memory_stability_class,
             "memory_chain_hash": memory_chain_hash,
             "memory_provenance_hash": memory_provenance_hash,
+            "semantic_nucleus_identity_hash": semantic_nucleus_identity_hash,
             "confidence_summary": confidence_summary,
             "temporal_anchor": temporal_anchor,
             "temporal_continuity_hash": temporal_continuity_hash,
@@ -752,7 +760,6 @@ class DeterministicInterpreter(BaseModel):
             "temporal_lineage_hash": temporal_lineage_hash,
             "temporal_compression_hash": temporal_compression_hash,
             "temporal_provenance_hash": temporal_provenance_hash,
-
             "semantic_summary": {
                 "hash": semantic_hash,
                 "tokens": normalized_tokens,
@@ -761,9 +768,9 @@ class DeterministicInterpreter(BaseModel):
                 "provenance_weighted_tokens": provenance_weighted_tokens,
                 "provenance_fingerprint": provenance_fingerprint,
                 "provenance_weighted_hash": provenance_weighted_hash,
-
             },
         }
+
 
         # --- Construct and return the reasoning tree ---
         return ReasoningTree(
